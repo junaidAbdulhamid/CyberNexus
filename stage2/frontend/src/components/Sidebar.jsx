@@ -1,17 +1,18 @@
 import React, { useMemo } from "react";
-import { DEVICE_GLYPH, SEVERITIES, SEVERITY_STYLE } from "../lib/theme.js";
+import { SEVERITIES, SEVERITY_STYLE } from "../lib/theme.js";
+import Icon, { DeviceIcon } from "./Icon.jsx";
 
 /**
- * Left rail: search, filters, and the ranked alert list.
+ * Left rail: search, the ranked alert queue, and filters.
  *
- * The alert list is the keyboard-first path to the same information the 3D view
- * shows: every row is a real button, ordered worst-first, and selecting one
- * flies the camera to that node. Someone who cannot use a pointer, or who just
- * prefers a list, is never locked out of the map.
+ * The queue is the keyboard-first path to everything the 3D view shows. Every
+ * row is a real button, ordered worst-first, and selecting one flies the camera
+ * there. Someone who cannot use a pointer — or who simply prefers a list — is
+ * never locked out of the map.
  */
 export default function Sidebar({
   topology, states, filter, onFilterChange, query, onQueryChange,
-  selectedId, onSelect, onAcknowledge, searchRef,
+  selectedId, onSelect, onAcknowledge, searchRef, onOpenPalette,
 }) {
   const facets = useMemo(() => {
     const subnets = new Map();
@@ -28,6 +29,7 @@ export default function Sidebar({
 
   const ranked = states.ranked();
   const nodeIndex = topology?.index;
+  const criticalCount = ranked.filter((s) => s.severity === "critical").length;
 
   const toggle = (key, value) => {
     const next = new Set(filter[key] || []);
@@ -35,75 +37,105 @@ export default function Sidebar({
     onFilterChange({ [key]: next });
   };
 
+  const activeFilters =
+    (filter.subnets?.size || 0) + (filter.vendors?.size || 0) +
+    (filter.deviceTypes?.size || 0) + (filter.minSeverity ? 1 : 0);
+
   return (
-    <aside className="sidebar" aria-label="Filters and alerts">
+    <aside className="sidebar" aria-label="Alerts and filters">
       <div className="panel-section">
-        <label className="field-label" htmlFor="node-search">
-          Search <span className="hint">(press <kbd>/</kbd>)</span>
-        </label>
-        <input
-          id="node-search"
-          ref={searchRef}
-          type="search"
-          className="search-input"
-          placeholder="name, IP, MAC, vendor…"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          aria-describedby="search-help"
-        />
+        <label className="field-label" htmlFor="node-search">Search</label>
+        <div className="search-wrap">
+          <Icon name="search" size={13} className="search-icon" />
+          <input
+            id="node-search"
+            ref={searchRef}
+            type="search"
+            className="search-input"
+            placeholder="name, IP, MAC, vendor…"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            aria-describedby="search-help"
+          />
+          <kbd className="search-kbd">/</kbd>
+        </div>
         <p id="search-help" className="hint">
-          Filters the map. Alerting hosts always stay visible.
+          Filters the map. Alerting hosts always stay visible.{" "}
+          <button type="button" className="link-button" onClick={onOpenPalette}>
+            ⌘K for commands
+          </button>
         </p>
       </div>
 
       <div className="panel-section">
         <h2 className="panel-title" id="alerts-heading">
-          Active alerts <span className="count-badge">{ranked.length}</span>
+          <Icon name="alert" size={11} />
+          Alert queue
+          <span className={`count-badge ${criticalCount > 0 ? "is-hot" : ""}`}>{ranked.length}</span>
         </h2>
+
         {ranked.length === 0 ? (
-          <p className="empty">No active alerts.</p>
+          <p className="empty">
+            <Icon name="check" size={20} className="empty-icon" />
+            No active alerts.<br />
+            <span className="faint">The network is quiet.</span>
+          </p>
         ) : (
-          <ul className="alert-list" aria-labelledby="alerts-heading">
-            {ranked.slice(0, 60).map((state) => {
-              const index = nodeIndex?.get(state.node_id);
-              const node = index !== undefined ? topology.nodes[index] : null;
-              const style = SEVERITY_STYLE[state.severity];
-              return (
-                <li key={state.node_id}>
-                  <button
-                    type="button"
-                    className={`alert-row sev-${state.severity} ${selectedId === state.node_id ? "is-selected" : ""}`}
-                    onClick={() => onSelect(state.node_id)}
-                    aria-current={selectedId === state.node_id ? "true" : undefined}
-                    data-testid={`alert-row-${state.node_id}`}
-                    data-severity={state.severity}
-                  >
-                    <span className="sev-glyph" aria-hidden="true">{style.glyph}</span>
-                    <span className="alert-row-main">
-                      <span className="alert-row-name">
-                        {DEVICE_GLYPH[node?.device_type] || "○"} {node?.name || state.node_id}
+          <div className="alert-list-scroll">
+            <ul className="alert-list" aria-labelledby="alerts-heading">
+              {ranked.slice(0, 80).map((state) => {
+                const index = nodeIndex?.get(state.node_id);
+                const node = index !== undefined ? topology.nodes[index] : null;
+                const style = SEVERITY_STYLE[state.severity];
+                return (
+                  <li key={state.node_id}>
+                    <button
+                      type="button"
+                      className={`alert-row sev-${state.severity} ${selectedId === state.node_id ? "is-selected" : ""}`}
+                      onClick={() => onSelect(state.node_id)}
+                      aria-current={selectedId === state.node_id ? "true" : undefined}
+                      data-testid={`alert-row-${state.node_id}`}
+                      data-severity={state.severity}
+                    >
+                      <span className="sev-glyph" aria-hidden="true">{style.glyph}</span>
+                      <span className="alert-row-main">
+                        <span className="alert-row-name">
+                          <DeviceIcon type={node?.device_type} size={12} />
+                          {node?.name || state.node_id}
+                        </span>
+                        {/* Compact on purpose: at rail width the long form
+                            ("5 alerts · port 21") truncated mid-word, which
+                            reads as a bug rather than as elision. */}
+                        <span className="alert-row-meta">
+                          {node?.ip}
+                          <span className="faint"> · </span>{state.alert_count}×
+                          {state.top_ports?.length ? (
+                            <><span className="faint"> · </span>:{state.top_ports[0]}</>
+                          ) : null}
+                        </span>
                       </span>
-                      <span className="alert-row-meta">
-                        {node?.ip} · {state.alert_count} alert{state.alert_count === 1 ? "" : "s"}
-                        {state.top_ports?.length ? ` · port ${state.top_ports[0]}` : ""}
-                      </span>
-                    </span>
-                    <span className="alert-row-sev">{style.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+                      <span className="alert-row-sev">{style.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         )}
+
         {ranked.length > 0 && (
           <button type="button" className="btn btn-ghost" onClick={onAcknowledge}>
-            Acknowledge worst
+            <Icon name="check" size={12} /> Acknowledge worst
           </button>
         )}
       </div>
 
       <details className="panel-section" open>
-        <summary className="panel-title">Filters</summary>
+        <summary className="panel-title">
+          <Icon name="filter" size={11} />
+          Filters
+          {activeFilters > 0 && <span className="count-badge">{activeFilters}</span>}
+        </summary>
 
         <fieldset className="filter-group">
           <legend>Minimum severity</legend>
@@ -126,26 +158,28 @@ export default function Sidebar({
 
         <FacetGroup
           legend="Subnet" items={facets.subnets} selected={filter.subnets}
-          onToggle={(v) => toggle("subnets", v)} limit={12}
+          onToggle={(v) => toggle("subnets", v)} limit={10}
         />
         <FacetGroup
           legend="Device type" items={facets.types} selected={filter.deviceTypes}
-          onToggle={(v) => toggle("deviceTypes", v)} limit={10}
+          onToggle={(v) => toggle("deviceTypes", v)} limit={9}
         />
         <FacetGroup
           legend="Vendor" items={facets.vendors} selected={filter.vendors}
-          onToggle={(v) => toggle("vendors", v)} limit={10}
+          onToggle={(v) => toggle("vendors", v)} limit={8}
         />
 
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={() => onFilterChange({
-            subnets: new Set(), vendors: new Set(), deviceTypes: new Set(), minSeverity: null,
-          })}
-        >
-          Clear filters
-        </button>
+        {activeFilters > 0 && (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => onFilterChange({
+              subnets: new Set(), vendors: new Set(), deviceTypes: new Set(), minSeverity: null,
+            })}
+          >
+            <Icon name="x" size={12} /> Clear all filters
+          </button>
+        )}
       </details>
     </aside>
   );
@@ -165,7 +199,8 @@ function FacetGroup({ legend, items, selected, onToggle, limit }) {
             onClick={() => onToggle(value)}
             title={`${count} device${count === 1 ? "" : "s"}`}
           >
-            {value || "unknown"} <span className="chip-count">{count}</span>
+            {String(value || "unknown").replace(/_/g, " ")}
+            <span className="chip-count">{count}</span>
           </button>
         ))}
       </div>

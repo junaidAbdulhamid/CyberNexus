@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Icon from "../components/Icon.jsx";
 
 /**
  * The baseline interface the 3D map is measured against.
@@ -66,17 +67,22 @@ export default function LogView({ api, onSelect, selectedId }) {
   return (
     <div className="logview" data-testid="log-view">
       <div className="logview-toolbar">
-        <label className="field-label" htmlFor="log-filter">Filter</label>
-        <input
-          id="log-filter" type="search" className="search-input"
-          placeholder="IP, node, port, severity…"
-          value={query} onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="search-wrap">
+          <Icon name="search" size={13} className="search-icon" />
+          <input
+            id="log-filter" type="search" className="search-input"
+            placeholder="IP, node, port, severity…"
+            aria-label="Filter alerts"
+            value={query} onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         <label className="checkbox">
           <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
           Auto-refresh (1 s)
         </label>
-        <button type="button" className="btn btn-small" onClick={refresh}>Refresh now</button>
+        <button type="button" className="btn btn-small" onClick={refresh}>
+          <Icon name="refresh" size={11} /> Refresh
+        </button>
         <span className="dim">
           {rows.length} alerts · updated {lastRefresh ? new Date(lastRefresh).toLocaleTimeString() : "—"}
         </span>
@@ -106,7 +112,17 @@ export default function LogView({ api, onSelect, selectedId }) {
               >
                 <td className="mono">{new Date(alert.detected_at * 1000).toLocaleTimeString()}</td>
                 <td><span className={`sev-text sev-${alert.severity}`}>{alert.severity}</span></td>
-                <td>{alert.score.toFixed(3)}</td>
+                <td>
+                  <span className="score-cell">
+                    <span className="score-bar">
+                      <span style={{
+                        width: `${Math.round(alert.score * 100)}%`,
+                        background: `var(--sev-${alert.severity})`,
+                      }} />
+                    </span>
+                    {alert.score.toFixed(3)}
+                  </span>
+                </td>
                 <td className="mono">{alert.src_ip}:{alert.src_port}</td>
                 <td className="mono">{alert.dst_ip}</td>
                 <td>{alert.dst_port}</td>

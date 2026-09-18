@@ -73,6 +73,7 @@ export function KeyboardHelp({ open, onClose }) {
       >
         <h2 id="kb-help-title">Keyboard shortcuts</h2>
         <dl className="shortcut-list">
+          <dt><kbd>⌘K</kbd></dt><dd>Command palette: search hosts, run actions</dd>
           <dt><kbd>/</kbd></dt><dd>Focus search</dd>
           <dt><kbd>n</kbd> / <kbd>↓</kbd></dt><dd>Next alerting host</dd>
           <dt><kbd>p</kbd> / <kbd>↑</kbd></dt><dd>Previous alerting host</dd>

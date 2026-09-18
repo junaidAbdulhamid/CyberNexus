@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SEVERITY_RANK } from "../lib/theme.js";
+import Icon from "./Icon.jsx";
 
 /**
  * History scrubber with playback.
@@ -79,14 +80,14 @@ export default function Timeline({ api, onReplay, onLive, live }) {
           onClick={() => { setPlaying(false); setValue(1); onLive(); }}
           aria-pressed={live}
         >
-          ● Live
+          <Icon name="live" size={11} /> Live
         </button>
         <button
           type="button" className="btn btn-small" disabled={!range}
           onClick={() => setPlaying((p) => !p)}
           aria-label={playing ? "Pause playback" : "Play history"}
         >
-          {playing ? "❚❚ Pause" : "▶ Play"}
+          <Icon name={playing ? "pause" : "play"} size={11} /> {playing ? "Pause" : "Play"}
         </button>
         <label className="speed-label">
           Speed
@@ -99,7 +100,10 @@ export default function Timeline({ api, onReplay, onLive, live }) {
           {live ? "following live stream"
                 : atTime ? new Date(atTime * 1000).toLocaleTimeString() : "no history"}
         </span>
-        <a className="btn btn-small" href={api.exportUrl("csv")} download>Export CSV</a>
+        <span className="timeline-spacer" />
+        <a className="btn btn-small" href={api.exportUrl("csv")} download>
+          <Icon name="download" size={11} /> CSV
+        </a>
         <a className="btn btn-small" href={api.exportUrl("json")} download>JSON</a>
       </div>
 

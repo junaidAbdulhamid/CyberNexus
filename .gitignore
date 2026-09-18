@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- project-specific overrides -------------------------------------------
+# This file started from the standard Python template, whose `lib/` rule (for
+# packaging output) also matches the frontend's own source directory at
+# stage2/frontend/src/lib. That silently excluded the client library — the API
+# client, the alert store and the design tokens — from every commit, leaving a
+# repository that could not build. Re-include it explicitly.
+!stage2/frontend/src/lib/

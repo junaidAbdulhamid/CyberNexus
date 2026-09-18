@@ -1,0 +1,30 @@
+# Runtime + training + benchmarking.  Versions are the ones this build was
+# tested against (Python 3.11-3.13).
+#
+# Core pipeline
+numpy==2.5.3
+msgpack==1.2.2
+redis==8.1.0
+
+# Model: training, export and serving
+scikit-learn==1.9.1
+joblib==1.6.0
+onnxruntime==1.30.0
+skl2onnx==1.20.0
+onnx==1.22.0
+
+# Alerting API
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+websockets==17.1
+prometheus-client==0.24.1
+
+# Capture prototype (pcap / live sniff)
+scapy==2.7.0
+
+# Public-dataset adapters (UNSW-NB15 / CIC-IDS-2017) only
+pandas==3.0.6
+
+# Tests
+pytest==9.1.1
+httpx==0.28.1

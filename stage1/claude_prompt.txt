@@ -1,0 +1,50 @@
+Stage 1 — CyberNexus: Real-time Detection System
+
+Goal:
+Build a production-ready, high-throughput real-time network detection system that inspects live connections and flags suspicious activity. Demonstrate >=96% detection on provided simulated attacks while sustaining 10,000+ connections/sec (benchmarked and reproducible).
+
+Deliverables (code + docs + benchmarks):
+- capture/: high-throughput packet capture exporter (pcap prototype) that writes parsed connection records to a message bus (Redis Streams by default).
+- ingest/: streaming consumer that aggregates flows, extracts features, and forwards feature vectors for inference.
+- model/: training pipeline (PyTorch or scikit-learn possible), saved model export (ONNX or joblib/TorchScript), and a low-latency inference wrapper.
+- api/: alerting service (REST + WebSocket) recording flagged connections and exposing metrics.
+- bench/: synthetic traffic generator and evaluation harness to simulate 10k+ connections/sec, run detection benchmarks, and report ROC, precision, recall, F1, and throughput.
+- docker-compose.yml and README with quickstart and benchmark commands.
+
+Constraints & Tech stack (choose and justify in your response):
+- Languages: Python for pipeline & model; optional Rust/C for capture component notes.
+- Message bus: Redis Streams by default; include notes for Kafka variant.
+- Capture: prototype using pcap/scapy for correctness; include production notes for Zeek/DPDK/eBPF.
+- Inference: ONNX Runtime or joblib/TorchScript; include micro-batching and async workers for low latency.
+
+Data & Evaluation:
+- Use a public IDS dataset (CIC-IDS, UNSW-NB15) and include a data synthesis script to reach 10k cps in bench mode.
+- Provide a deterministic benchmark runner that starts capture → ingest → inference → records alerts and computes detection metrics against ground truth.
+
+Model Guidance:
+- Begin with a simple, performant model (lightweight MLP or RandomForest on flow features). Show experiments with 1D-CNN / transformer only if needed for accuracy.
+- Feature set: duration, bytes, packets, flags, inter-arrival times, port stats, payload-size entropy, basic TLS/HTTP metadata.
+
+Performance Engineering:
+- Provide profiling scripts and concurrency guidance (asyncio, multiprocessing, CPU affinity).
+- Include sharding and consumer group patterns for horizontal scaling.
+
+Security & Privacy:
+- Default: do not store raw payloads. Provide an opt-in config for payload extraction.
+
+Acceptance Criteria:
+- Benchmark script runs and reports detection rate ≥96% on simulated attacks.
+- Pipeline sustains 10k+ connections/sec in the provided benchmark environment or documents required hardware.
+- A docker-compose demo for end-to-end functionality (or clear scripted local start).
+
+What I expect you to return (as Claude):
+- Complete runnable code with tests and README.
+- A benchmark report with measured numbers (or reproducible steps to measure them).
+- Design rationale and TODOs for production hardening (eBPF/DPDK, Kafka, GPU inference).
+
+Notes for implementation:
+- Keep the training and inference code separate so the model can be swapped.
+- Provide bench/run_bench.sh or make bench to run the end-to-end benchmark.
+- Include unit tests for feature extraction and an integration test for the end-to-end path.
+
+End of prompt.

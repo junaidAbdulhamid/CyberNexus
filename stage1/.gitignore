@@ -1,0 +1,15 @@
+# Benchmark output (regenerate with `make bench`)
+artifacts/bench/
+artifacts/bench-drift/
+artifacts/difficulty_sweep.json
+
+# Public IDS datasets (hundreds of MB; see model/get_dataset.sh)
+data/
+
+# Captures
+*.pcap
+*.pcapng
+
+# Trained model: small enough to commit if you want a reproducible artifact,
+# ignored by default so the repo does not carry binaries.
+artifacts/model/

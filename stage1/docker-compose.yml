@@ -1,0 +1,107 @@
+# End-to-end demo: redis -> generator -> ingest -> scorer -> api
+#
+#   docker compose up --build            # full demo with synthetic traffic
+#   docker compose --profile capture up  # add live capture (Linux, needs NET_ADMIN)
+#
+# Then:  http://localhost:8000/health
+#        http://localhost:8000/alerts
+#        websocat ws://localhost:8000/ws/alerts
+
+x-common: &common
+  build: .
+  image: cybernexus/stage1:latest
+  environment: &env
+    CN_REDIS_URL: redis://redis:6379/0
+    CN_BUS: redis
+    CN_MODEL_DIR: /app/artifacts/model
+    CN_LOG_LEVEL: INFO
+    CN_PUBLISH_BATCH: "512"
+    CN_READ_BATCH: "16"
+  volumes:
+    - model:/app/artifacts/model
+  depends_on:
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # Trains a model into the shared volume on first start, then exits.  Every
+  # other service waits for it, so the stack never serves an untrained model.
+  trainer:
+    <<: *common
+    command: ["python", "-m", "model.train", "--n", "300000", "--out", "/app/artifacts/model"]
+    restart: "no"
+
+  ingest:
+    <<: *common
+    command: ["python", "-m", "ingest.consumer", "--workers", "2"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+
+  scorer:
+    <<: *common
+    command: ["python", "-m", "model.scorer", "--workers", "2"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+
+  api:
+    <<: *common
+    command: ["python", "-m", "api.app"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Demo traffic so the stack has something to detect.  Replace with the
+  # capture service below to inspect a real interface.
+  generator:
+    <<: *common
+    command: ["python", "-m", "bench.generator", "--rate", "2000", "--duration", "0", "--total", "0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+
+  # Live capture.  Needs the host network and NET_RAW/NET_ADMIN, and only works
+  # as intended on Linux: opt in with `docker compose --profile capture up`.
+  capture:
+    <<: *common
+    profiles: ["capture"]
+    command: ["python", "-m", "capture.pcap_capture", "--iface", "eth0"]
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    environment:
+      <<: *env
+      CN_REDIS_URL: redis://localhost:6379/0
+      CN_IFACE: eth0
+
+volumes:
+  model:

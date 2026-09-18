@@ -138,9 +138,39 @@ test.describe("Stage 1 alert -> node highlighted", () => {
     await page.waitForTimeout(3000);
     const stats = await page.evaluate(() => window.__cnmap.getSceneStats());
     console.log(`scene: ${stats.fps.toFixed(1)} fps, ${stats.drawCalls} draw calls, ` +
-                `${stats.nodesRendered} nodes rendered`);
+                `${stats.nodesRendered}/${await page.evaluate(() => window.__cnmap.getTopologySize())} nodes, ` +
+                `${stats.triangles.toLocaleString()} triangles`);
     expect(stats.fps).toBeGreaterThan(20);
-    // The whole point of instancing: node count must not drive draw calls.
-    expect(stats.drawCalls).toBeLessThan(25);
+    // Every host is drawn individually at the default zoom - the frame rate is
+    // not being bought by hiding the network.
+    expect(stats.nodesRendered).toBeGreaterThan(100);
+  });
+
+  test("draw calls do not scale with the number of nodes drawn", async ({ page, request }) => {
+    // The instancing claim, stated as an experiment rather than a constant:
+    // a scene drawing every host must cost the same number of draw calls as one
+    // drawing a handful, because the hosts share one InstancedMesh. Roughly 20
+    // calls come from the fixed scene objects (nodes, halos, links, traffic,
+    // grid, starfield, labels, reticle) and the rest from the bloom mip chain.
+    const readStats = () => page.evaluate(() => {
+      const s = window.__cnmap.getSceneStats();
+      return { calls: s.drawCalls, nodes: s.nodesRendered };
+    });
+
+    await page.waitForTimeout(2500);
+    const full = await readStats();
+    expect(full.nodes).toBeGreaterThan(300);
+
+    // Filter the map down to almost nothing; the alerting hosts stay visible.
+    await page.getByLabel("Search").fill("hq-finance-ws-001");
+    await page.waitForTimeout(1500);
+    const filtered = await readStats();
+
+    console.log(`draw calls: ${full.calls} for ${full.nodes} nodes, ` +
+                `${filtered.calls} for ${filtered.nodes} nodes`);
+    expect(filtered.nodes).toBeLessThan(full.nodes / 4);
+    // Within a couple of calls: a filtered scene may drop the link batch.
+    expect(Math.abs(full.calls - filtered.calls)).toBeLessThanOrEqual(4);
+    expect(full.calls).toBeLessThan(45);
   });
 });

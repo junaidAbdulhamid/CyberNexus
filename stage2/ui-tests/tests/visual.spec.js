@@ -85,6 +85,46 @@ test.describe("visual regression", () => {
     await expect(page.locator(".sidebar")).toHaveScreenshot("06-sidebar-colorblind.png");
   });
 
+  test("status strip with a live incident", async ({ page, request }) => {
+    const topology = await getTopology(request);
+    await injectIncident(request, {
+      nodeId: pickHost(topology, 23).id, scenario: "exfiltration", seed: 4100,
+    });
+    await expect(page.getByTestId("kpi-threat")).toContainText(/CRITICAL|HIGH/, { timeout: 8000 });
+    await page.waitForTimeout(700);
+    await expect(page.locator(".kpi-strip")).toHaveScreenshot("08-kpi-strip.png", {
+      // The rate tile and the sparkline move on their own; the tile layout,
+      // typography and threat meter are what this snapshot is guarding.
+      mask: [page.locator(".kpi").nth(2), page.locator(".kpi-spark")],
+    });
+  });
+
+  test("command palette", async ({ page, request }) => {
+    const topology = await getTopology(request);
+    await injectIncident(request, {
+      nodeId: pickHost(topology, 31).id, scenario: "port_scan", seed: 4200,
+    });
+    await page.waitForTimeout(600);
+    await page.locator("body").click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press("ControlOrMeta+k");
+    const palette = page.getByTestId("command-palette");
+    await expect(palette).toBeVisible();
+    await page.getByTestId("palette-input").fill("acknowledge");
+    await page.waitForTimeout(400);
+    await expect(palette).toHaveScreenshot("09-command-palette.png");
+  });
+
+  test("incident banner", async ({ page, request }) => {
+    const topology = await getTopology(request);
+    await injectIncident(request, {
+      nodeId: pickHost(topology, 37).id, scenario: "c2_beacon", seed: 4300,
+    });
+    const banner = page.getByTestId("incident-banner");
+    await expect(banner).toBeVisible();
+    await page.waitForTimeout(600);
+    await expect(banner).toHaveScreenshot("10-incident-banner.png");
+  });
+
   test("keyboard shortcut dialog", async ({ page }) => {
     await page.locator("body").click({ position: { x: 5, y: 5 } });
     await page.keyboard.press("?");

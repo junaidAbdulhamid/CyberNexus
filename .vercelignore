@@ -1,0 +1,26 @@
+# Vercel uploads the project directory; everything the static build does not
+# need is excluded. Without this the Python virtualenv and both node_modules
+# trees get shipped to the builder.
+.venv/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+
+# Stage 1 is the detection pipeline: it has no part in a static frontend build.
+stage1/
+
+# Backend, discovery and tests — the demo build runs none of this.
+stage2/backend/
+stage2/cnmap/
+stage2/discovery/
+stage2/integration/
+stage2/tests/
+stage2/ui-tests/
+stage2/scripts/
+stage2/Dockerfile
+stage2/docker-compose.yml
+stage2/requirements.txt
+
+# `data/example-topology.json` is needed: the demo-data build step reads it.
+stage2/frontend/dist/

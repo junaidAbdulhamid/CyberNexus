@@ -224,3 +224,11 @@ __marimo__/
 # client, the alert store and the design tokens — from every commit, leaving a
 # repository that could not build. Re-include it explicitly.
 !stage2/frontend/src/lib/
+
+# Vercel CLI writes project linkage and a short-lived OIDC token here.
+# Scoped deliberately: the CLI's own suggestion is a blanket `.env*`, which
+# would also hide stage2/frontend/.env.demo — a build flag, not a secret.
+.vercel/
+.env
+.env.local
+.env.*.local

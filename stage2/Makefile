@@ -2,6 +2,7 @@
 #
 #   make setup        install python + node dependencies
 #   make demo         docker compose stack (redis + discovery + backend + alerts)
+#   make frontend-demo  build the backend-free static bundle (Vercel etc.)
 #   make dev          run backend and frontend locally with hot reload
 #   make test         python tests + UI tests
 #   make mtti         run the MTTI experiment and print the report
@@ -33,6 +34,13 @@ topology:
 frontend:
 	cd frontend && npm run build
 
+# Backend-free static bundle for a serverless host (see README, "Deploying").
+frontend-demo:
+	cd frontend && npm run build:demo
+
+preview-demo:
+	cd frontend && npm run preview:demo
+
 backend:
 	bash scripts/start-backend.sh
 
@@ -52,6 +60,10 @@ test-ui:
 
 test-visual:
 	cd ui-tests && npx playwright test tests/visual.spec.js
+
+# Needs `make preview-demo` running in another terminal.
+test-demo:
+	cd ui-tests && npx playwright test tests/demo.spec.js
 
 snapshots:
 	cd ui-tests && npx playwright test tests/visual.spec.js --update-snapshots

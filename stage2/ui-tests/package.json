@@ -9,7 +9,8 @@
     "test:visual": "playwright test tests/visual.spec.js",
     "test:a11y": "playwright test tests/a11y.spec.js",
     "test:update-snapshots": "playwright test tests/visual.spec.js --update-snapshots",
-    "mtti": "node mtti/run-mtti.js"
+    "mtti": "node mtti/run-mtti.js",
+    "test:demo": "playwright test tests/demo.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0"

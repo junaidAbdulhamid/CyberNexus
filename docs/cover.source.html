@@ -1,0 +1,282 @@
+<!doctype html>
+<!--
+  CyberNexus cover art — the source, not just the output.
+
+  The cover is composed from the application's own design tokens and a real
+  screenshot, so it cannot drift into showing something the product does not do.
+  Every figure on it is measured and traceable to stage1/BENCHMARK.md or
+  stage2/README.md.
+
+  Regenerate (from the repository root):
+
+    python3 -m http.server 8899 --directory docs &
+    npx playwright screenshot --viewport-size=1280,640 --scale=css \
+      http://localhost:8899/cover.source.html docs/cover.png
+
+  Rendered at deviceScaleFactor 2 for a 2560x1280 asset.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+/* Cover art, built from the application's own design tokens so it reads as the
+   same product rather than as marketing wrapped around it. */
+@font-face { font-family: "Inter"; src: url("fonts/inter-var.woff2") format("woff2");
+             font-weight: 100 900; font-display: block; }
+@font-face { font-family: "JBM"; src: url("fonts/jbm-400.woff2") format("woff2");
+             font-weight: 400; font-display: block; }
+@font-face { font-family: "JBM"; src: url("fonts/jbm-500.woff2") format("woff2");
+             font-weight: 500; font-display: block; }
+
+:root {
+  --bg: #05070d;
+  --surface-2: #101927;
+  --surface-3: #162133;
+  --border: #1c2940;
+  --text: #e8f0fb;
+  --dim: #8095b0;
+  --faint: #55698a;
+  --accent: #22d3ee;
+  --accent-dim: #0e7490;
+  --critical: #ff2d6f;
+  --ok: #34d399;
+  --sans: "Inter", system-ui, sans-serif;
+  --mono: "JBM", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 1280px; height: 640px; overflow: hidden;
+  font-family: var(--sans);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.cover {
+  position: relative; width: 1280px; height: 640px; overflow: hidden;
+  /* Same two-light setup the app uses: cyan key from upper right, violet fill
+     from lower left. It is what makes the flat panel read as depth. */
+  background:
+    radial-gradient(900px 560px at 88% -12%, rgba(34, 211, 238, 0.16), transparent 62%),
+    radial-gradient(760px 520px at -8% 112%, rgba(124, 58, 237, 0.13), transparent 64%),
+    var(--bg);
+}
+
+/* A faint engineering grid, masked so it never competes with the type. */
+.grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(148, 190, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 190, 255, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(700px 440px at 22% 46%, #000 12%, transparent 76%);
+  -webkit-mask-image: radial-gradient(700px 440px at 22% 46%, #000 12%, transparent 76%);
+}
+
+/* --- the product shot ---------------------------------------------------- */
+.shot-wrap {
+  position: absolute; left: 634px; top: 76px;
+  width: 952px; height: 570px;          /* 1.670 — the capture's own aspect */
+  perspective: 2000px;
+}
+.shot {
+  width: 100%; height: 100%;
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(90, 140, 190, 0.34);
+  transform: rotateY(-14deg) rotateX(3deg) rotate(-0.8deg);
+  transform-origin: left center;
+  box-shadow:
+    0 0 0 1px rgba(34, 211, 238, 0.14),
+    -46px 40px 130px rgba(0, 0, 0, 0.8),
+    0 0 150px rgba(34, 211, 238, 0.16);
+}
+.shot img {
+  width: 100%; height: 100%; object-fit: fill; display: block;
+  transform: scale(1.22) translate(-12.5%, 1%);
+  transform-origin: center;
+}
+.shot {
+  mask-image: linear-gradient(97deg, transparent 0%, rgba(0,0,0,0.5) 3.5%, #000 11%);
+  -webkit-mask-image: linear-gradient(97deg, transparent 0%, rgba(0,0,0,0.5) 3.5%, #000 11%);
+}
+/* Fade the far edge into the background instead of ending on a hard border. */
+.shot-fade {
+  position: absolute; left: 596px; right: 0; top: 0; bottom: 0; pointer-events: none;
+  background: linear-gradient(95deg, rgba(5, 7, 13, 0.92) 0%, rgba(5, 7, 13, 0.34) 11%, transparent 26%);
+}
+
+/* --- left column --------------------------------------------------------- */
+.panel {
+  position: absolute; left: 58px; top: 62px; width: 566px;
+  display: flex; flex-direction: column;
+}
+
+.brand { display: flex; align-items: center; gap: 13px; margin-bottom: 28px; }
+.mark {
+  width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center;
+  background: linear-gradient(145deg, var(--accent), var(--accent-dim));
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.44);
+  color: #04121a;
+}
+.brand-name { font-size: 25px; font-weight: 700; letter-spacing: -0.6px; line-height: 1; }
+.brand-sub {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2.3px;
+  color: var(--faint); text-transform: uppercase; margin-top: 5px;
+}
+
+h1 {
+  font-size: 41px; font-weight: 640; line-height: 1.12; letter-spacing: -1.4px;
+  margin-bottom: 16px;
+}
+h1 .hl {
+  background: linear-gradient(94deg, var(--accent) 12%, #7dd3fc 58%, #a78bfa 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.lede {
+  font-size: 14.5px; line-height: 1.56; color: var(--dim);
+  max-width: 546px; margin-bottom: 24px;
+}
+.lede strong { color: var(--text); font-weight: 560; }
+
+/* --- metrics ------------------------------------------------------------- */
+.metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 11px; overflow: hidden;
+  margin-bottom: 22px;
+}
+.metric {
+  min-width: 0;
+  background: linear-gradient(180deg, rgba(16, 25, 39, 0.96), rgba(10, 16, 27, 0.96));
+  padding: 12px 11px 13px; position: relative;
+}
+.metric::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: rgba(255, 255, 255, 0.055);
+}
+.metric-value {
+  font-family: var(--mono); font-weight: 500; font-size: 21px;
+  letter-spacing: -0.8px; line-height: 1.05; font-variant-numeric: tabular-nums;
+}
+.metric-value .unit { font-size: 11px; color: var(--faint); margin-left: 2px; letter-spacing: 0; }
+.metric-label {
+  font-size: 8.2px; font-weight: 640; letter-spacing: 1.05px; text-transform: uppercase;
+  color: var(--faint); margin-top: 7px; line-height: 1.35;
+}
+.v-accent { color: var(--accent); }
+.v-ok { color: var(--ok); }
+.v-crit { color: var(--critical); }
+
+/* --- stack --------------------------------------------------------------- */
+.stack { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 18px; }
+.chip {
+  font-family: var(--mono); font-size: 10px; color: var(--dim);
+  background: rgba(22, 33, 51, 0.8); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 9px;
+}
+
+.stages { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
+.stage { display: flex; align-items: baseline; gap: 9px; }
+.stage-no {
+  font-family: var(--mono); font-size: 10px; color: var(--accent);
+  border: 1px solid rgba(34, 211, 238, 0.42); border-radius: 5px;
+  padding: 2px 6px; letter-spacing: 0.5px;
+}
+.stage-text { font-size: 12.5px; color: var(--dim); }
+.stage-text b { color: var(--text); font-weight: 560; }
+
+.vignette {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(660px 380px at 104% 104%, rgba(5, 7, 13, 0.72), transparent 66%),
+    linear-gradient(0deg, rgba(5, 7, 13, 0.55) 0%, transparent 16%);
+}
+
+/* Cyan hairline along the bottom, tying the composition together. */
+.rule {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent) 0%, #7dd3fc 26%, #a78bfa 52%, transparent 88%);
+  opacity: 0.85;
+}
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="grid"></div>
+
+  <div class="shot-wrap">
+    <div class="shot"><img src="screenshot-map.png" alt="" /></div>
+  </div>
+  <div class="shot-fade"></div>
+
+  <div class="panel">
+    <div class="brand">
+      <div class="mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">CyberNexus</div>
+        <div class="brand-sub">network detection &amp; response</div>
+      </div>
+    </div>
+
+    <h1>Catch the intrusion.<br /><span class="hl">See the host light up.</span></h1>
+
+    <p class="lede">
+      A detection pipeline that scores <strong>10,000 connections a second</strong>,
+      wired to a live 3D map that puts the compromised host in front of an analyst
+      in <strong>101&nbsp;milliseconds</strong>.
+    </p>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-value v-accent">96.99<span class="unit">%</span></div>
+        <div class="metric-label">Detection<br />@ 1.3% FPR</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">10k<span class="unit">/s</span></div>
+        <div class="metric-label">Sustained<br />165k ceiling</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value v-crit">101<span class="unit">ms</span></div>
+        <div class="metric-label">Alert to<br />pixel</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value v-ok">60<span class="unit">fps</span></div>
+        <div class="metric-label">428 nodes<br />28 draws</div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <span class="chip">Python</span>
+      <span class="chip">scikit-learn → ONNX</span>
+      <span class="chip">FastAPI</span>
+      <span class="chip">Redis Streams</span>
+      <span class="chip">React</span>
+      <span class="chip">Three.js / WebGL</span>
+      <span class="chip">Docker</span>
+    </div>
+
+    <div class="stages">
+      <div class="stage">
+        <span class="stage-no">01</span>
+        <span class="stage-text"><b>Detection</b> — capture → features → inference</span>
+      </div>
+      <div class="stage">
+        <span class="stage-no">02</span>
+        <span class="stage-text"><b>Live 3D map</b> — discovery → correlation</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="vignette"></div>
+  <div class="rule"></div>
+</div>
+</body>
+</html>

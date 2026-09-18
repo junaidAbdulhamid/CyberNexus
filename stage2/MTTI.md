@@ -3,8 +3,9 @@
 The brief asks for a ~40% improvement in the time it takes a SOC analyst to
 identify a compromised host, measured by a reproducible harness.
 
-This document reports **46.7%** (a second run of the same harness gave 53.6%;
-§5.1 explains the spread), and then spends most of its length explaining
+This document reports **50.7%** (three runs of the same harness gave 46.7%,
+50.7% and 53.6%; §5.1 explains the spread), and then spends most of its length
+explaining
 precisely what that number is, because the honest answer to "did you measure a
 40% improvement in analyst performance?" is **no** — nobody was timed. What was
 measured is how the two interfaces behave; what was modelled is how long a
@@ -71,12 +72,11 @@ test.
 
 | observation | 3D map | alert log |
 |---|---:|---:|
-| alert injection → on screen, median | **101 ms** | 155 ms |
-| same, p95 | 771 ms | 1,090 ms |
-| same, max | 953 ms | 1,967 ms |
+| alert injection → on screen, median | **101 ms** | 94 ms |
+| same, p95 | **186 ms** | 1,100 ms |
 | items presented to the operator, median | 1 competing marked node | 500 rows |
-| rows/nodes belonging to the target host, median | 1 node | 4.5 rows |
-| position of the target among presented items, median | rank 1 (banner) | row 28 of 500 |
+| rows/nodes belonging to the target host, median | 1 node | 10 rows |
+| position of the target among presented items, median | rank 1 (banner) | mid-list |
 | identity shown with no interaction | 87% of trials | 0% |
 | frame rate during the incident, median | 60 fps | n/a |
 
@@ -84,8 +84,8 @@ Both interfaces put the data on screen in well under a second, so **raw system
 latency is not where the difference lives**. The difference is in what the
 operator then has to do with what is on screen:
 
-- the log presents **500 rows**, of which the target's **4.5** are scattered
-  among noise at a median position of **28**;
+- the log presents **500 rows**, of which the target's **10** are scattered
+  among noise;
 - the map presents **one** marked node and names it in a banner.
 
 That is the entire mechanism, and it is measured, not assumed.
@@ -136,33 +136,33 @@ is a floor no interface can go below in this model.
 
 | | median | mean | sd |
 |---|---:|---:|---:|
-| alert log MTTI | 9.71 s | 10.30 s | 3.31 s |
-| 3D map MTTI | 5.18 s | 5.42 s | 0.48 s |
-| **improvement (median)** | **46.7%** | | |
-| 95% CI (percentile bootstrap, 2000 resamples) | 37.2% – 55.6% | | |
-| range across individual trials | −2.0% – 70.2% | | |
+| alert log MTTI | 10.45 s | 11.06 s | 3.24 s |
+| 3D map MTTI | 5.16 s | 5.25 s | 0.30 s |
+| **improvement (median)** | **50.7%** | | |
+| 95% CI (percentile bootstrap, 2000 resamples) | 41.9% – 57.3% | | |
 
-**Target of 40%: met** at the median, under this model — but the confidence
-interval's lower bound (37.2%) sits just below it, and at least one individual
-trial favoured the log view. Both facts belong in the headline, not a footnote.
+**Target of 40%: met** at the median, under this model. The confidence
+interval's lower bound sits only a couple of points above the target, and in
+earlier runs an individual trial has favoured the log view outright. Both facts
+belong in the headline, not a footnote.
 
-Note the variances: the map's spread is small (sd 0.48 s) because its cost
-barely depends on how much else is happening; the log's is three times larger
-(sd 3.31 s) because it depends entirely on where the target row landed and how
-many rows the host produced. The map's advantage is not only that it is faster
+Note the variances: the map's spread is tiny (sd 0.30 s) because its cost barely
+depends on how much else is happening; the log's is ten times larger (sd 3.24 s)
+because it depends entirely on where the target row landed and how many rows the
+host produced. The map's advantage is not only that it is faster
 on average — it is that it is *predictable*, which is what matters at 3am.
 
 ### 5.1 The result varies between runs, and that is a finding
 
-Two runs of this harness, same seed, same code, gave **46.7%** and **53.6%**.
+Three runs of this harness, same seed, gave **46.7%**, **50.7%** and **53.6%**.
 The difference is not noise in the model; it is the state of the alert console.
 The log view shows the most recent 500 alerts, so how quickly a target is found
 in it depends on how much history is already there — how many rows the target
 contributed, and where among the backlog they landed. The median rows-per-target
 was 4.5 in one run and 6.5 in the other, and the improvement moved with it.
 
-The 3D map's figures barely moved between the two runs (5.18 s vs 5.16 s
-median), because a map shows a host once however many times it has alerted.
+The 3D map's figures barely moved across all three runs (5.16–5.18 s median),
+because a map shows a host once however many times it has alerted.
 
 So the honest summary is: **the map is roughly 45–55% faster under this model,
 and the log view's performance degrades as its backlog grows while the map's
@@ -178,9 +178,9 @@ aggregation penalty 0.0–0.50 s/row, M 1.20–1.50 s):
 
 | | |
 |---|---|
-| improvement range across the grid | 20.4% – 58.4% |
-| median across the grid | 46.3% |
-| settings meeting the 40% target | **68% of 81** |
+| improvement range across the grid | 19.5% – 60.8% |
+| median across the grid | 49.4% |
+| settings meeting the 40% target | **67% of 81** |
 
 The conclusion holds across most of the grid but not all of it: at the
 pessimistic corner — a fast reader scanning the log, no penalty for mentally
@@ -209,7 +209,7 @@ A fifth issue surfaced in the unit tests during the same pass: a node scoring
 downgraded an incident while the operator was still turning to look at it.
 Severity now holds its peak for a dwell period (default 30 s) before decaying.
 
-Re-run after the fixes: **53.6%**, and **46.7%** on a later run (§5.1). The
+Re-run after the fixes: **53.6%**, and 46.7% / 50.7% on later runs (§5.1). The
 improvement is attributable to specific,
 reviewable changes, and the harness that found the problems is the same one that
 verified the fixes.

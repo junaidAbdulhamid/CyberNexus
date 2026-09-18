@@ -7,11 +7,11 @@ with the affected host impossible to miss.
 
 | | measured on a 10-core laptop |
 |---|---|
-| Alert injection → host marked on screen | **101 ms median**, 771 ms p95 |
-| Frame rate, 428 nodes, incident in progress | **60 fps**, 3–7 draw calls |
+| Alert injection → host marked on screen | **101 ms median**, 186 ms p95 |
+| Frame rate, 428 nodes, incident in progress | **60 fps**, 28 draw calls (constant in node count) |
 | Topology payload | 100 KB compact (3.1× smaller than the object form) |
-| Identification time vs. a log console | **46.7% faster** (45–55% across runs) — a *model* output, see below |
-| Tests | 135 Python, 21 browser (integration, accessibility, visual regression) |
+| Identification time vs. a log console | **50.7% faster** (47–54% across runs) — a *model* output, see below |
+| Tests | 135 Python, 25 browser (integration, accessibility, visual regression) |
 
 That last figure clears the brief's 40% MTTI target, and it comes with a caveat stated
 up front rather than in a footnote: **no humans were timed.** The harness
@@ -77,14 +77,117 @@ district and routers above those, so "up" means "closer to the core". Positions
 are deterministic — the map looks the same tomorrow, which is what lets an
 operator learn it.
 
-When a host alerts, it changes in **three redundant ways at once**: colour, size,
-and a pulsing halo. The rest of the network dims. The worst incident names
-itself in a banner at the top — host, address, behaviour — so identifying it
-needs no clicking at all.
+When a host alerts it changes in **four redundant ways at once**: colour, size,
+a pulsing halo, and genuine emissive glow picked up by a bloom pass. The rest of
+the network dims, links carrying the incident light up and show packet flow, and
+a shockwave marks the instant of escalation. The worst incident **names itself**
+in a banner — host, address, behaviour — so identifying it needs no clicking.
 
-**Keyboard** (press `?` for the full list): `w` jump to worst, `n`/`p` walk the
-alert list, `Enter` fly to it, `a` acknowledge, `/` search, `c` cycle palette,
-`b` switch to the log view.
+Glow, pulse and halo are **rationed** to the most severe tier present, capped at
+six hosts. Pop-out only works when the target is unique; with ninety nodes
+marked, animating all of them would destroy the very effect the design depends
+on. Lower-severity hosts stay coloured and visible, just still.
+
+### Interface
+
+| | |
+|---|---|
+| **Status strip** | threat level with a meter, hosts alerting, alert rate, estate size, pipeline health — with sparklines and eased counters |
+| **Alert queue** | ranked worst-first, keyboard-navigable, each row a real button |
+| **⌘K palette** | search every host by name, IP, MAC or vendor, or run any command |
+| **Node detail** | identity, severity, telemetry, recent alerts with score bars, and the three actions worth taking |
+| **Timeline** | history scrubber with playback, severity density strip, CSV/JSON export |
+| **Three palettes** | deep space, a colourblind-safe luminance ramp, and high contrast on pure black |
+| **Adaptive quality** | sustained low frame rates drop the effects rather than the frame rate |
+
+**Keyboard** (press `?` for the full list): `⌘K` command palette, `w` jump to
+worst, `n`/`p` walk the queue, `Enter` fly to it, `a` acknowledge, `/` search,
+`c` cycle palette, `l` toggle clustering, `b` switch to the log view.
+
+---
+
+## Deploying
+
+### What can and cannot go on a serverless host
+
+The backend holds a **WebSocket per client**, a **background thread** consuming
+Stage 1's Redis stream, and **in-memory node state** that decays on a timer.
+Serverless platforms — Vercel, Netlify Functions, Cloudflare Pages Functions —
+give you none of those: functions are stateless, short-lived, and Vercel does
+not support WebSocket upgrades at all. Porting the live backend there would mean
+replacing the stream with polling and the state with a database round trip per
+request, which would quietly destroy the sub-second guarantee the whole design
+is built around.
+
+So there are two deployment shapes, and the right one depends on what you want
+the URL to do.
+
+### 1. Static demo — one URL, no infrastructure
+
+```bash
+cd stage2/frontend
+npm run build:demo        # -> dist-demo/
+npm run preview:demo      # http://localhost:4173
+```
+
+`VITE_DEMO_MODE=1` swaps the *transport* and keeps everything else. The same
+client interfaces are served by an in-browser engine
+(`src/lib/demo/engine.js`) that reimplements the observable parts of
+`cnmap/store.py` and `integration/simulator.py` — severity with dwell and
+exponential decay, the timeline, replay, acknowledgement, and the attack
+scenarios. The React tree, the 3D scene, the command palette and the keyboard
+layer cannot tell the difference, because they are handed the same shapes.
+
+What is genuinely lost, and what the UI says on its face with a **demo data**
+badge: there is no Stage 1 sensor behind it. The alerts are synthetic — as they
+also are in `docker compose up`, but there they travel through a real Redis
+stream and a real correlator.
+
+Deploy it from the repository root (`vercel.json` and `.vercelignore` are
+committed):
+
+```bash
+vercel login
+vercel --prod
+```
+
+Vercel builds `stage2/frontend` and serves `dist-demo/`. Nothing else in the
+repository is uploaded — the virtualenv, both `node_modules` trees, Stage 1 and
+the Python services are all excluded.
+
+The demo build is covered by its own suite, including an assertion that it makes
+no network call to `/api` at all:
+
+```bash
+cd stage2/frontend && npm run preview:demo      # in one terminal
+cd stage2/ui-tests && npm run test:demo         # in another
+```
+
+### 2. Split deployment — real backend, static frontend
+
+Put the frontend on any static host and the backend somewhere that can hold a
+socket open: Railway, Render, Fly.io, or a VM. Build the frontend against the
+backend's origin:
+
+```bash
+cd stage2/frontend
+VITE_API_BASE=https://cybernexus-api.example.com npm run build
+```
+
+and allow that origin on the backend:
+
+```bash
+CN_MAP_CORS=https://your-frontend.vercel.app
+```
+
+The backend image already exists (`stage2/Dockerfile`) and needs one Redis
+instance. This is the only shape that shows real Stage 1 detections.
+
+### 3. Single box — the simplest real deployment
+
+`docker compose up` serves the built frontend from the FastAPI service itself,
+so there is no CORS, no second origin and no `VITE_API_BASE`. If you control a
+host, prefer this.
 
 ---
 
@@ -168,6 +271,15 @@ All endpoints need `X-API-Key` (or `?api_key=` for the WebSocket), except
 | `CN_MAP_WEBHOOK_URL` | unset | ticketing endpoint; unset means dry-run |
 | `CN_MAP_ALLOW_SIMULATION` | `1` | set `0` to disable incident injection |
 | `CN_MAP_AUTH` | `1` | set `0` only for local development |
+| `CN_MAP_CORS` | localhost:5173 | allowed origins for a split deployment |
+
+Frontend build-time variables:
+
+| variable | default | meaning |
+|---|---|---|
+| `VITE_API_BASE` | same origin | backend origin, for a split deployment |
+| `VITE_API_KEY` | `demo-key` | API key baked into the bundle |
+| `VITE_DEMO_MODE` | unset | `1` builds the backend-free static demo |
 
 ---
 
@@ -175,8 +287,9 @@ All endpoints need `X-API-Key` (or `?api_key=` for the WebSocket), except
 
 ```bash
 make test-py          # 135 python tests
-make test-ui          # 21 browser tests (needs the backend running)
+make test-ui          # 25 browser tests (needs the backend running)
 make test             # both
+cd ui-tests && npm run test:demo   # 6 tests for the static demo build
 make snapshots        # regenerate visual-regression baselines
 make mtti             # the MTTI experiment
 ```

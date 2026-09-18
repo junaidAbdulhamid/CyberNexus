@@ -119,6 +119,80 @@ map that is red.
 
 ---
 
+## 3b. The visual system
+
+The interface is a design system, not a collection of styles. Every colour,
+size and duration resolves to a token, and the tokens are written onto `:root`
+at runtime — which is why switching palette restyles the entire application,
+3D scene included, in one assignment rather than by toggling class names across
+the component tree.
+
+**Type.** Two families doing two jobs. Inter (variable, self-hosted) for prose
+and labels; JetBrains Mono for every number, address and identifier. Anything
+that changes in place — counters, rates, scores, timestamps — uses tabular
+figures, so digits do not jitter as values update. Fonts are bundled rather
+than fetched from a CDN: the demo has to work inside a container with no egress,
+and a self-hosted font also removes the layout shift a late webfont causes.
+
+**Depth.** Four surface levels, each slightly lighter and bluer than the last,
+with a hairline top-edge highlight. On a dark UI, shadows heavy enough to
+separate panels also muddy everything behind them; an edge highlight separates
+them for one pixel and no cost. Panels that float over the map — the legend, the
+hover card, toasts, the palette — use backdrop blur so the network stays
+readable underneath them instead of being boxed out.
+
+**Glow is information, not decoration.** Alerting nodes are picked up by a
+bloom pass because they are genuinely emissive, and the emissive strength is a
+per-instance attribute threaded into the standard material with a small
+`onBeforeCompile` patch. That matters: brightness is a pre-attentive channel —
+the eye is drawn to a bright region before any conscious search begins — and it
+is a channel a differently-coloured-but-equally-bright node does not have. The
+bloom threshold is set high (0.68) so only that emissive geometry blooms; lower,
+and the whole scene hazes over, which reads as a dirty screen rather than as
+glowing hosts.
+
+**Motion is reserved.** Three things move: the pulse on the most severe tier, a
+shockwave ring at the instant an alert escalates, and packets flowing along the
+links of a live incident. All three mark *change*, which is what motion is good
+for. Nothing idles or drifts, counters ease to their new value rather than
+snapping, and `prefers-reduced-motion` turns the lot off.
+
+**The status strip** answers five questions in the order an operator asks them:
+is anything wrong, how bad, how much is arriving, how big is the estate, is the
+pipeline healthy. Five tiles is the budget; everything else is a click away.
+
+**⌘K** is the fastest path to a named host on a map of hundreds. It merges
+active alerts, all hosts, and the command set into one ranked list, and every
+command shows its shortcut — so using the palette teaches you to stop needing it.
+
+### Rendering cost, measured
+
+`ui-tests/integration.spec.js` asserts the instancing claim as an experiment
+rather than as a constant: it renders every host, then filters the map down to
+one, and compares.
+
+| | draw calls | nodes drawn |
+|---|---:|---:|
+| whole network | 28 | 428 |
+| filtered to a single host | 28 | 1 |
+
+Identical, because all the hosts live in one `InstancedMesh`. Roughly 20 of
+those calls are the fixed scene objects (nodes, halos, links, traffic, grid,
+starfield, district labels, reticle) and the remainder is the bloom mip chain.
+77,200 triangles, 60 fps.
+
+Two instrumentation notes, because both were bugs first. `EffectComposer` calls
+`renderer.render()` once per pass and each call resets the render stats, so
+reading them afterwards reports the final fullscreen quad and nothing else — the
+status bar cheerfully claimed "1 draw call" until `info.autoReset` was turned off
+and the counter reset manually at the top of the frame. And the camera framing
+solves the frustum against the actual node positions rather than the bounding
+box: this layout is a ring of districts, and a disc inscribed in its own AABB
+leaves the four corners empty, which shrank the network to three quarters of the
+panel for nothing.
+
+---
+
 ## 4. Architecture
 
 ```

@@ -1,0 +1,20 @@
+# Stage 2 backend, discovery and integration.
+# Versions are the ones this build was tested against (Python 3.11-3.13).
+
+# API
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+websockets==17.1
+pydantic==2.13.5
+PyJWT==2.11.0
+
+# Stage 1 alert stream + shared demo state
+redis==8.1.0
+msgpack==1.2.2
+
+# Active discovery (optional at runtime; ARP sweep degrades gracefully without it)
+scapy==2.7.0
+
+# Tests
+pytest==9.1.1
+httpx==0.28.1

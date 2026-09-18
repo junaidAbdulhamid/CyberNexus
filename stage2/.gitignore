@@ -1,0 +1,17 @@
+# Node
+frontend/node_modules/
+frontend/dist/
+ui-tests/node_modules/
+
+# Test output (snapshots under tests/*-snapshots/ are committed on purpose)
+ui-tests/results/
+ui-tests/test-results/
+.pytest_cache/
+
+# Generated topologies. The example one is committed so the demo runs on a
+# fresh checkout; discovery output from a real network is not.
+data/discovered-topology.json
+data/topology.json
+
+__pycache__/
+*.pyc

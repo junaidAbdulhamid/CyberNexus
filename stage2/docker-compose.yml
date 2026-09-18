@@ -1,0 +1,81 @@
+# Stage 2 demo: discovery -> backend -> browser, fed by Stage 1 alerts.
+#
+#   docker compose up --build
+#   open http://localhost:8080          (API key: demo-key)
+#
+# The `simulator` service publishes synthetic alerts in Stage 1's own wire
+# format to Stage 1's own Redis stream, so the demo exercises the real
+# ingestion path. To drive the map from a genuine Stage 1 deployment instead,
+# stop that service and point both stacks at the same Redis:
+#
+#   docker compose stop simulator
+#   (cd ../stage1 && docker compose up)
+
+x-common: &common
+  build: .
+  image: cybernexus/map:latest
+  environment: &env
+    CN_MAP_REDIS_URL: redis://redis:6379/0
+    CN_MAP_TOPOLOGY: /app/data/example-topology.json
+    CN_MAP_API_KEY: demo-key
+    CN_MAP_LOG_LEVEL: INFO
+    CN_ALERT_STREAM: cn:alerts
+  volumes:
+    - topology:/app/data
+  depends_on:
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # Builds the example topology into the shared volume once, then exits.
+  # A real deployment replaces this with `discovery.run_discovery` against the
+  # live network (see README, "Running discovery for real").
+  discovery:
+    <<: *common
+    command: ["python", "-m", "discovery.synthesize", "--nodes", "400",
+              "--out", "/app/data/example-topology.json"]
+    restart: "no"
+
+  backend:
+    <<: *common
+    command: ["python", "-m", "backend.app"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      discovery:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Synthetic Stage 1 alerts so the demo has something to show.
+  simulator:
+    <<: *common
+    command: ["python", "-m", "integration.simulator",
+              "--topology", "/app/data/example-topology.json",
+              "--redis-url", "redis://redis:6379/0",
+              "--noise-rate", "1.5", "--incident-every", "25", "--duration", "0"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      discovery:
+        condition: service_completed_successfully
+
+volumes:
+  topology:

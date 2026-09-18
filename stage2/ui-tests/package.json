@@ -1,0 +1,17 @@
+{
+  "name": "cybernexus-map-ui-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:integration": "playwright test tests/integration.spec.js",
+    "test:visual": "playwright test tests/visual.spec.js",
+    "test:a11y": "playwright test tests/a11y.spec.js",
+    "test:update-snapshots": "playwright test tests/visual.spec.js --update-snapshots",
+    "mtti": "node mtti/run-mtti.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}
